@@ -1,0 +1,1057 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AgencyScope — Benchmark de Agencias</title>
+  <meta name="description" content="Herramienta de benchmarking para analizar y comparar agencias de marketing desde posicionamiento, servicios, oferta, prueba social, funnel, SEO/AEO y stack comercial.">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <style>
+    :root{
+      --bg:#f4f7fb; --panel:#ffffff; --panel-2:#f8fbff; --ink:#172033; --muted:#667085; --line:#e3e8f2;
+      --brand:#5C63FF; --brand-2:#458CFF; --brand-3:#33C6B8; --ok:#0f8f67; --warn:#aa6c09; --danger:#c03e3e;
+      --shadow:0 14px 40px rgba(30,41,59,.08); --shadow-soft:0 6px 16px rgba(30,41,59,.06); --radius:18px;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0; background:
+      radial-gradient(circle at 0% 0%, rgba(92,99,255,.14), transparent 32%),
+      radial-gradient(circle at 100% 0%, rgba(51,198,184,.12), transparent 24%),
+      var(--bg);
+      color:var(--ink);
+      font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    a{color:#4256d6; text-decoration:none}
+    button, input, select, textarea{font:inherit}
+    .app{display:grid; grid-template-columns:280px minmax(0,1fr); min-height:100vh}
+    .sidebar{
+      position:sticky; top:0; height:100vh; padding:22px 18px;
+      background:#0f172a; color:#fff;
+      border-right:1px solid rgba(255,255,255,.06);
+    }
+    .brand{display:flex; align-items:center; gap:12px; margin-bottom:22px}
+    .brand img{width:46px; height:46px; border-radius:14px; box-shadow:0 8px 18px rgba(0,0,0,.15)}
+    .brand h1{font-size:19px; margin:0; letter-spacing:.01em}
+    .brand small{display:block; color:#9badc8; font-size:12px; margin-top:2px}
+    .sidebar-card{
+      background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);
+      border-radius:16px; padding:14px; margin-bottom:18px;
+    }
+    .mini-title{font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:#95a5c8; margin-bottom:7px}
+    .sidebar p{margin:0; color:#c8d3ea; font-size:13px; line-height:1.5}
+    .nav{display:grid; gap:6px; margin:10px 0 20px}
+    .nav button{
+      width:100%; border:0; background:transparent; color:#b8c5df;
+      display:flex; align-items:center; gap:10px;
+      padding:11px 12px; border-radius:12px; cursor:pointer; text-align:left; transition:.2s ease;
+    }
+    .nav button:hover{background:rgba(255,255,255,.06); color:#fff}
+    .nav button.active{
+      background:linear-gradient(135deg, rgba(92,99,255,.28), rgba(69,140,255,.20));
+      color:#fff; border:1px solid rgba(255,255,255,.08)
+    }
+    .nav-icon{
+      width:26px; height:26px; border-radius:8px;
+      display:grid; place-items:center;
+      background:rgba(255,255,255,.08); font-size:13px;
+      flex:0 0 auto;
+    }
+    .sidebar-footer{
+      position:absolute; left:18px; right:18px; bottom:18px;
+      font-size:12px; color:#90a0bf; line-height:1.5
+    }
+
+    .content{padding:30px; max-width:1600px; width:100%; margin:0 auto}
+    .topbar{
+      display:flex; gap:12px; align-items:center; justify-content:space-between; margin-bottom:18px;
+      flex-wrap:wrap;
+    }
+    .topbar-left{display:flex; flex-direction:column; gap:8px}
+    .eyebrow{
+      display:inline-flex; align-items:center; gap:8px; width:max-content;
+      background:#fff; border:1px solid var(--line); color:#53627f;
+      border-radius:999px; padding:7px 11px; font-size:12px; box-shadow:var(--shadow-soft)
+    }
+    .hero{
+      background:linear-gradient(135deg, rgba(92,99,255,.06), rgba(69,140,255,.05) 45%, rgba(51,198,184,.05));
+      border:1px solid #dfe5f4; border-radius:26px; padding:24px; box-shadow:var(--shadow); margin-bottom:20px;
+      display:grid; grid-template-columns:minmax(0,1.3fr) minmax(300px,.7fr); gap:20px; align-items:stretch;
+    }
+    .hero h2{font-size:34px; line-height:1.08; margin:0 0 10px}
+    .hero p{margin:0; color:var(--muted); line-height:1.6; max-width:850px}
+    .hero-bullets{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:18px}
+    .hero-bullet{
+      background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px 13px;
+      font-size:13px; color:#475467; display:flex; gap:10px; align-items:flex-start
+    }
+    .hero-bullet .dot{
+      width:20px; height:20px; border-radius:999px; background:linear-gradient(135deg,var(--brand),var(--brand-3));
+      color:#fff; display:grid; place-items:center; font-size:12px; flex:0 0 auto;
+      margin-top:1px;
+    }
+    .hero-panel{
+      background:#fff; border:1px solid var(--line); border-radius:20px; padding:18px;
+      display:flex; flex-direction:column; justify-content:space-between;
+    }
+    .hero-panel h3{margin:0 0 8px; font-size:16px}
+    .hero-panel p{font-size:14px}
+    .hero-steps{display:grid; gap:10px; margin-top:12px}
+    .step{
+      display:grid; grid-template-columns:32px 1fr; gap:10px; align-items:start;
+      padding:10px 0; border-bottom:1px dashed var(--line)
+    }
+    .step:last-child{border-bottom:0}
+    .step .n{
+      width:32px; height:32px; border-radius:12px; display:grid; place-items:center;
+      background:linear-gradient(135deg,var(--brand),var(--brand-2)); color:#fff; font-weight:700;
+    }
+    .step b{display:block; font-size:13px; margin-bottom:3px}
+    .step span{font-size:12px; color:var(--muted); line-height:1.45}
+
+    .controls{
+      background:var(--panel); border:1px solid var(--line); border-radius:20px; box-shadow:var(--shadow);
+      padding:16px; margin-bottom:18px;
+    }
+    .controls-head{
+      display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:14px; flex-wrap:wrap;
+    }
+    .controls-head h3{margin:0; font-size:16px}
+    .controls-head p{margin:5px 0 0; color:var(--muted); font-size:13px}
+    .controls-grid{
+      display:grid; grid-template-columns:minmax(0,1.6fr) 220px auto auto; gap:12px;
+    }
+    .field label{
+      display:block; margin:0 0 6px 2px; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:#667085;
+    }
+    .field textarea, .field select{
+      width:100%; border:1px solid var(--line); background:#fbfcff; color:var(--ink);
+      border-radius:14px; padding:12px 13px; outline:none; transition:.2s ease;
+    }
+    .field textarea{min-height:120px; resize:vertical; line-height:1.45}
+    .field textarea:focus, .field select:focus{
+      border-color:#bec9ff; box-shadow:0 0 0 4px rgba(92,99,255,.1)
+    }
+    .helper{margin-top:8px; font-size:12px; color:var(--muted)}
+    .btn{
+      border:1px solid var(--line); background:#fff; color:var(--ink);
+      border-radius:14px; padding:12px 15px; cursor:pointer; transition:.2s ease; height:max-content;
+      display:inline-flex; align-items:center; justify-content:center; gap:8px; font-weight:600;
+    }
+    .btn:hover{transform:translateY(-1px); box-shadow:var(--shadow-soft)}
+    .btn-primary{
+      color:#fff; border:0;
+      background:linear-gradient(135deg,var(--brand),var(--brand-2));
+      box-shadow:0 10px 25px rgba(92,99,255,.25)
+    }
+    .btn-ghost{background:#f8fbff}
+    .quick-actions{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px}
+    .chip{
+      border:1px solid var(--line); background:#fff; border-radius:999px; padding:8px 10px; font-size:12px;
+      color:#44506a; cursor:pointer; transition:.2s ease;
+    }
+    .chip:hover{border-color:#c8d0ff; background:#f7f8ff}
+    .loading{
+      display:none; align-items:center; gap:12px; background:#fff; border:1px solid var(--line);
+      border-radius:16px; padding:13px 16px; margin-bottom:16px; box-shadow:var(--shadow-soft);
+      color:#44506a
+    }
+    .spinner{
+      width:18px; height:18px; border-radius:999px; border:2px solid #dbe3f3; border-top-color:var(--brand);
+      animation:spin 1s linear infinite
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .section{display:none}
+    .section.active{display:block}
+    .grid{display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:14px}
+    .card{
+      background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:18px;
+      box-shadow:var(--shadow-soft);
+    }
+    .span12{grid-column:1/-1}
+    .span8{grid-column:span 8}
+    .span6{grid-column:span 6}
+    .span4{grid-column:span 4}
+    .span3{grid-column:span 3}
+    .kpi{grid-column:span 3}
+    .kpi .label{font-size:12px; color:var(--muted); margin-top:6px}
+    .kpi .value{font-size:29px; font-weight:760}
+    .card h3{margin:0 0 10px; font-size:15px}
+    .card h4{margin:16px 0 8px; font-size:13px}
+    .muted{color:var(--muted)}
+    .small{font-size:12px}
+    .caption{font-size:11px; color:var(--muted)}
+    .pills{display:flex; flex-wrap:wrap; gap:8px}
+    .pill{
+      background:var(--panel-2); border:1px solid var(--line); border-radius:999px;
+      padding:7px 10px; font-size:12px; color:#364152;
+    }
+    .good{color:var(--ok)}
+    .warn{color:var(--warn)}
+    .bad{color:var(--danger)}
+    .scroll{overflow:auto; max-height:560px}
+    table{width:100%; border-collapse:collapse; font-size:12px}
+    th,td{padding:10px; text-align:left; vertical-align:top; border-bottom:1px solid var(--line)}
+    th{background:#fbfcff; color:#475467; position:sticky; top:0; z-index:1}
+    .bar-row{
+      display:grid; grid-template-columns:170px 1fr 48px; gap:10px; align-items:center; margin:9px 0;
+    }
+    .bar{
+      height:9px; background:#edf1f7; border-radius:999px; overflow:hidden;
+    }
+    .bar i{
+      display:block; height:100%; border-radius:999px;
+      background:linear-gradient(90deg,var(--brand),var(--brand-3));
+    }
+    .score-grid{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px}
+    .score{
+      border:1px solid var(--line); background:linear-gradient(180deg,#fff,#fbfcff);
+      border-radius:14px; padding:14px; min-height:88px
+    }
+    .score b{display:block; font-size:28px; margin-bottom:6px}
+    .score span{font-size:12px; color:#556176}
+    .profile{
+      display:grid; grid-template-columns:130px 1fr; gap:8px 12px;
+    }
+    .profile div:nth-child(odd){color:var(--muted); font-size:12px}
+    .source-row{padding:9px 0; border-bottom:1px solid var(--line)}
+    .source-row:last-child{border-bottom:0}
+    .chart{height:330px}
+    .accordion{display:grid; gap:10px}
+    details{
+      border:1px solid var(--line); border-radius:14px; background:#fff; overflow:hidden;
+    }
+    summary{
+      list-style:none; cursor:pointer; padding:14px 16px; font-weight:700;
+      display:flex; justify-content:space-between; align-items:center; gap:14px;
+      background:#fcfdff
+    }
+    summary::-webkit-details-marker{display:none}
+    details .details-body{padding:0 16px 16px}
+    .callout{
+      background:#fff9ea; border:1px solid #efdfae; border-radius:15px;
+      padding:13px 14px; color:#775b14; line-height:1.5;
+    }
+    .empty-state{
+      border:1px dashed #cfd8ec; background:#fbfcff; border-radius:18px; padding:24px; text-align:center;
+      color:#58657d
+    }
+    .empty-state img{width:54px; height:54px; opacity:.75; margin-bottom:8px}
+    .footer-note{
+      margin-top:16px; font-size:12px; color:var(--muted); line-height:1.55;
+    }
+
+
+    .insight-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+    .insight-card{
+      border:1px solid var(--line);border-radius:15px;padding:14px;
+      background:linear-gradient(180deg,#fff,#f9fbff)
+    }
+    .insight-card .metric{font-size:24px;font-weight:800;margin:8px 0 4px}
+    .insight-card .title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+    .insight-card .company{font-size:13px;font-weight:700}
+    .signal-list{display:grid;gap:8px}
+    .signal{
+      border:1px solid var(--line);background:#fbfcff;border-radius:12px;padding:10px 11px
+    }
+    .signal b{display:block;font-size:12px;margin-bottom:3px}
+    .signal span{font-size:11px;color:var(--muted)}
+    .financial-table{display:grid;gap:8px}
+    .financial-row{
+      display:grid;grid-template-columns:140px 120px 1fr;gap:10px;align-items:start;
+      border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:#fcfdff
+    }
+    .visibility{
+      display:inline-flex;width:max-content;border-radius:999px;padding:4px 7px;
+      font-size:10px;background:#eef2ff;color:#4a56aa
+    }
+    .risk{
+      border-left:3px solid #e5a63a;background:#fffaf0;padding:10px 12px;border-radius:8px;margin:8px 0
+    }
+    .risk b{display:block;font-size:12px;margin-bottom:4px}
+    .risk span{font-size:11px;color:#735c2c}
+    @media (max-width:1180px){.insight-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (max-width:680px){.insight-grid{grid-template-columns:1fr}.financial-row{grid-template-columns:1fr}}
+
+    @media (max-width:1180px){
+      .hero{grid-template-columns:1fr}
+      .controls-grid{grid-template-columns:1fr 200px auto auto}
+      .score-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+    @media (max-width:1040px){
+      .app{grid-template-columns:1fr}
+      .sidebar{position:relative; height:auto; padding:14px}
+      .nav{display:flex; overflow:auto; white-space:nowrap}
+      .nav button{width:auto; min-width:max-content}
+      .sidebar-footer{display:none}
+      .content{padding:20px 16px 40px}
+      .span8,.span6,.span4,.span3{grid-column:1/-1}
+      .kpi{grid-column:span 6}
+      .controls-grid{grid-template-columns:1fr 1fr}
+    }
+    @media (max-width:680px){
+      .hero h2{font-size:28px}
+      .controls-grid{grid-template-columns:1fr}
+      .kpi{grid-column:1/-1}
+      .profile{grid-template-columns:1fr}
+      .score-grid{grid-template-columns:1fr}
+      .hero-bullets{grid-template-columns:1fr}
+      .bar-row{grid-template-columns:110px 1fr 40px}
+      .topbar{align-items:flex-start}
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="{{ url_for('static', filename='logo.svg') }}" alt="AgencyScope">
+      <div>
+        <h1>AgencyScope</h1>
+        <small>Benchmark de agencias</small>
+      </div>
+    </div>
+
+    <div class="sidebar-card">
+      <div class="mini-title">Objetivo</div>
+      <p>Entender cómo se posicionan, venden y compiten otras agencias para descubrir patrones, vacíos de mercado y oportunidades reales para tu futura agencia.</p>
+    </div>
+
+    <div class="nav">
+      <button class="active" data-tab="dashboard"><span class="nav-icon">🏠</span>Dashboard</button>
+      <button data-tab="posicionamiento"><span class="nav-icon">🧭</span>Posicionamiento</button>
+      <button data-tab="servicios"><span class="nav-icon">🧩</span>Servicios y oferta</button>
+      <button data-tab="prueba"><span class="nav-icon">🏆</span>Prueba y confianza</button>
+      <button data-tab="funnel"><span class="nav-icon">🎯</span>Funnel y conversión</button>
+      <button data-tab="negocio"><span class="nav-icon">📈</span>Negocio y finanzas</button>
+      <button data-tab="contenido"><span class="nav-icon">📚</span>Contenido y SEO/AEO</button>
+      <button data-tab="pauta"><span class="nav-icon">📣</span>Pauta y stack</button>
+      <button data-tab="whitespace"><span class="nav-icon">✨</span>Oportunidades</button>
+      <button data-tab="evidencia"><span class="nav-icon">🔎</span>Evidencia</button>
+    </div>
+
+    <div class="sidebar-footer">
+      Los resultados se basan en señales públicas del sitio web. Las inferencias están marcadas como tales. Los puntajes son comparativos, no absolutos.
+    </div>
+  </aside>
+
+  <main class="content">
+    <div class="topbar">
+      <div class="topbar-left">
+        <span class="eyebrow">🧠 Investigación competitiva para agencias</span>
+      </div>
+      <button class="btn" onclick="exportCSV()">⬇️ Exportar CSV</button>
+    </div>
+
+    <section class="hero">
+      <div>
+        <h2>Descubre cómo compiten otras agencias y dónde podrías diferenciarte.</h2>
+        <p>
+          AgencyScope analiza dominios de agencias de marketing para comparar posicionamiento, servicios, nichos, pruebas, funnel, SEO/AEO, stack tecnológico y señales de pauta, y ahora agrega una lectura gerencial del modelo comercial, madurez, adquisición y visibilidad financiera.
+        </p>
+
+        <div class="hero-bullets">
+          <div class="hero-bullet"><span class="dot">✓</span><span>Compara varias agencias a la vez y detecta patrones rápidamente.</span></div>
+          <div class="hero-bullet"><span class="dot">✓</span><span>Identifica categorías saturadas y posibles espacios de posicionamiento.</span></div>
+          <div class="hero-bullet"><span class="dot">✓</span><span>Evalúa qué tan claro es su mensaje, su oferta y su prueba comercial.</span></div>
+          <div class="hero-bullet"><span class="dot">✓</span><span>Úsalo como base para definir tu propia agencia con más criterio.</span></div>
+        </div>
+      </div>
+
+      <div class="hero-panel">
+        <div>
+          <h3>Cómo funciona</h3>
+          <p class="muted">La herramienta revisa información pública del sitio principal y de páginas clave para construir un benchmark comparativo.</p>
+        </div>
+
+        <div class="hero-steps">
+          <div class="step"><div class="n">1</div><div><b>Agrega dominios competidores</b><span>Uno por línea. Idealmente de 4 a 8 agencias que sí compitan contigo.</span></div></div>
+          <div class="step"><div class="n">2</div><div><b>Ejecuta el benchmark</b><span>AgencyScope analiza servicios, nichos, precios visibles, CTAs, proof, SEO, pauta y stack.</span></div></div>
+          <div class="step"><div class="n">3</div><div><b>Interpreta y decide</b><span>Revisa tendencias y oportunidades para definir un mejor posicionamiento de salida.</span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="controls">
+      <div class="controls-head">
+        <div>
+          <h3>Configura tu benchmark</h3>
+          <p>Introduce agencias competidoras y compara su estrategia visible desde una sola interfaz.</p>
+        </div>
+      </div>
+
+      <div class="controls-grid">
+        <div class="field">
+          <label>Dominios competidores</label>
+          <textarea id="domains" placeholder="ejemplo:
+neuelane.com
+singlegrain.com
+webfx.com
+smartsites.com"></textarea>
+          <div class="helper">Consejo: usa agencias parecidas entre sí para que la comparación tenga más sentido.</div>
+        </div>
+
+        <div class="field">
+          <label>Mercado</label>
+          <select id="country">
+            <option value="CO">Colombia</option>
+            <option value="US">Estados Unidos</option>
+            <option value="MX">México</option>
+            <option value="ES">España</option>
+            <option value="GB">Reino Unido</option>
+          </select>
+          <div class="helper">Se usa para los enlaces de librerías de anuncios y referencias de mercado.</div>
+        </div>
+
+        <button class="btn btn-primary" onclick="analyze()">🚀 Analizar competidores</button>
+        <button class="btn btn-ghost" onclick="loadExample()">📋 Cargar ejemplo</button>
+      </div>
+
+      <div class="quick-actions">
+        <button class="chip" onclick="setCompetitors(['webfx.com','singlegrain.com','smartsites.com','nogood.io'])">Mix performance</button>
+        <button class="chip" onclick="setCompetitors(['neuelane.com','huemor.rocks','columnfivemedia.com','c42d.co'])">Mix branding / creatividad</button>
+        <button class="chip" onclick="setCompetitors(['growfusely.com','animalz.co','omniscient.digital','siege media.com'])">Mix content / SEO</button>
+      </div>
+    </section>
+
+    <div id="loading" class="loading">
+      <div class="spinner"></div>
+      <div>
+        <b>Analizando competidores…</b>
+        <div class="small muted">Esto puede tomar unos segundos mientras se revisan webs, páginas clave y sitemaps.</div>
+      </div>
+    </div>
+
+    <div id="output">
+      <div class="empty-state">
+        <img src="{{ url_for('static', filename='logo.svg') }}" alt="">
+        <h3 style="margin:0 0 8px">Todavía no hay resultados</h3>
+        <p style="margin:0 0 6px">Agrega varios dominios competidores y pulsa <b>“Analizar competidores”</b>.</p>
+        <p class="small muted" style="margin:0">Aquí aparecerán las comparativas, hallazgos y oportunidades detectadas.</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  let current = null;
+  let charts = [];
+
+  const esc = (s) => (s ?? "").toString().replace(/[&<>"']/g, (m) => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]));
+  const link = (u,t) => u ? `<a target="_blank" rel="noopener" href="${esc(u)}">${esc(t||u)}</a>` : "—";
+  const yes = (v) => v ? '<span class="good">Sí</span>' : '<span class="muted">No</span>';
+  const pill = (x) => `<span class="pill">${esc(x)}</span>`;
+
+  const LABELS = {
+    "Positioning":"Posicionamiento",
+    "Offer":"Oferta",
+    "Proof":"Prueba",
+    "Funnel":"Funnel",
+    "Content":"Contenido",
+    "Paid readiness":"Preparación para pauta",
+    "Social presence":"Presencia social",
+    "SEO/AEO hygiene":"Higiene SEO/AEO"
+  };
+
+  function destroyCharts(){
+    charts.forEach(c => c.destroy());
+    charts = [];
+  }
+
+  function makeChart(id, type, labels, datasets, options={}){
+    const el = document.getElementById(id);
+    if(!el) return;
+    charts.push(new Chart(el, {
+      type,
+      data: { labels, datasets },
+      options: {
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{
+          legend:{ labels:{ color:"#475467" } }
+        },
+        scales: type === "radar" ? {} : {
+          x:{ ticks:{ color:"#667085" }, grid:{ color:"#eef1f6" } },
+          y:{ ticks:{ color:"#667085" }, grid:{ color:"#eef1f6" }, beginAtZero:true }
+        },
+        ...options
+      }
+    }));
+  }
+
+  function scoreCards(result){
+    return `<div class="score-grid">${
+      Object.entries(result.scores || {}).map(([k,v]) =>
+        `<div class="score"><b>${v}</b><span>${esc(LABELS[k] || k)}</span></div>`
+      ).join("")
+    }</div>`;
+  }
+
+  function freqList(items){
+    return (items || []).map(x => `
+      <div class="bar-row">
+        <span>${esc(x.label)}</span>
+        <div class="bar"><i style="width:${Math.min(100, x.share_pct)}%"></i></div>
+        <span>${x.share_pct}%</span>
+      </div>
+    `).join("") || '<span class="muted">No se detectaron señales suficientes.</span>';
+  }
+
+  function sourceRows(items, renderer){
+    return (items || []).map(renderer).join("") || '<span class="muted">Sin señales detectadas.</span>';
+  }
+
+  function render(data){
+    current = data;
+    destroyCharts();
+
+    const results = data.results || [];
+    const comparison = data.comparison || {};
+    const rows = comparison.companies || [];
+    const valid = results.filter(x => x.ok);
+
+    const avg = (key) => rows.length ? Math.round(rows.reduce((acc,row) => acc + (row[key] || 0), 0) / rows.length) : 0;
+
+    let html = `
+      <section id="dashboard" class="section active">
+        <div class="grid">
+          <div class="card kpi"><div class="value">${rows.length}</div><div class="label">Agencias analizadas</div></div>
+          <div class="card kpi"><div class="value">${avg("positioning_score")}</div><div class="label">Promedio de posicionamiento</div></div>
+          <div class="card kpi"><div class="value">${rows.filter(x => x.pricing_public).length}/${rows.length || 0}</div><div class="label">Publican precios visibles</div></div>
+          <div class="card kpi"><div class="value">${avg("proof_score")}</div><div class="label">Promedio de prueba comercial</div></div>
+
+
+          <div class="card span12">
+            <h3>Lectura ejecutiva</h3>
+            <p class="small muted">Quién sobresale en las variables más útiles para una lectura gerencial del benchmark.</p>
+            <div class="insight-grid">
+              ${(comparison.executive_insights || []).map(x => `
+                <div class="insight-card">
+                  <div class="title">${esc(x.title)}</div>
+                  <div class="metric">${esc(x.value)}</div>
+                  <div class="company">${esc(x.company)}</div>
+                </div>
+              `).join("") || '<span class="muted">Sin datos suficientes.</span>'}
+            </div>
+          </div>
+
+          <div class="card span12">
+            <h3>Resumen comparativo</h3>
+            <div class="scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Agencia</th>
+                    <th>Servicios</th>
+                    <th>Nichos</th>
+                    <th>Precios</th>
+                    <th>Proof</th>
+                    <th>Casos</th>
+                    <th>Contenido</th>
+                    <th>Redes</th>
+                    <th>Señales de pauta</th>
+                    <th>SEO/AEO</th>
+                    <th>Madurez</th>
+                    <th>Transparencia</th>
+                    <th>Canales de adquisición</th>
+                    <th>Respuesta</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${rows.map(r => `
+                    <tr>
+                      <td><b>${esc(r.name)}</b><div class="small muted">${esc(r.domain)}</div></td>
+                      <td>${r.services}</td>
+                      <td>${r.industries}</td>
+                      <td>${yes(r.pricing_public)}</td>
+                      <td>${r.proof_points}</td>
+                      <td>${r.case_studies}</td>
+                      <td>${r.content_pages}</td>
+                      <td>${r.social_networks}</td>
+                      <td>${r.ad_pixels}</td>
+                      <td>${r.seo_score}</td>
+                      <td>${r.maturity_score}</td>
+                      <td>${r.commercial_transparency}</td>
+                      <td>${r.acquisition_channels}</td>
+                      <td>${r.response_ms} ms</td>
+                    </tr>
+                  `).join("")}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card span6">
+            <h3>Posicionamiento vs prueba comercial</h3>
+            <div class="chart"><canvas id="scatter"></canvas></div>
+          </div>
+
+          <div class="card span6">
+            <h3>Puntajes principales</h3>
+            <div class="chart"><canvas id="scoreBars"></canvas></div>
+          </div>
+
+
+          <div class="card span6">
+            <h3>Madurez vs transparencia comercial</h3>
+            <div class="chart"><canvas id="maturityScatter"></canvas></div>
+          </div>
+
+          <div class="card span6">
+            <h3>Amplitud del mix de adquisición</h3>
+            <div class="chart"><canvas id="acquisitionChart"></canvas></div>
+          </div>
+
+          <div class="card span12">
+            <h3>Lectura rápida del benchmark</h3>
+            <div class="callout">
+              <b>Cómo leer esta vista:</b> usa este panel para detectar rápidamente quién tiene el posicionamiento más claro, quién muestra más prueba comercial, quién revela precios y qué tan poblado está el mercado en contenido, redes y preparación para pauta.
+            </div>
+          </div>
+          <div class="card span12">
+            <h3>Hallazgos estratégicos automáticos</h3>
+            <div class="signal-list">
+              ${(comparison.strategic_readout || []).map(x => `<div class="signal"><b>Insight</b><span>${esc(x)}</span></div>`).join("") || '<span class="muted">No hay suficientes señales para generar una lectura estratégica.</span>'}
+            </div>
+          </div>
+        </div>
+      </section>
+    `;
+
+    html += `
+      <section id="posicionamiento" class="section">
+        <div class="grid">
+          ${valid.map(r => `
+            <div class="card span6">
+              <h3>${esc(r.profile.name)}</h3>
+              <div class="profile">
+                <div>Dominio</div><div>${link(r.profile.website, r.profile.domain)}</div>
+                <div>Ubicación</div><div>${esc(r.profile.location || "No encontrada")}</div>
+                <div>H1 principal</div><div>${esc((r.profile.h1 || [])[0] || "No encontrado")}</div>
+                <div>Descripción</div><div>${esc(r.profile.description || "No encontrada")}</div>
+              </div>
+              <h4>Industrias / nichos</h4>
+              <div class="pills">${(r.industries || []).map(x => pill(x.label)).join("") || "—"}</div>
+              <h4>Buyer roles detectados</h4>
+              <div class="pills">${(r.buyer_roles || []).map(x => pill(x.label)).join("") || "—"}</div>
+              <h4>Puntajes</h4>
+              ${scoreCards(r)}
+            </div>
+          `).join("")}
+        </div>
+      </section>
+    `;
+
+    html += `
+      <section id="servicios" class="section">
+        <div class="grid">
+          <div class="card span6">
+            <h3>Frecuencia de servicios</h3>
+            ${freqList(comparison.service_frequency)}
+          </div>
+          <div class="card span6">
+            <h3>Frecuencia de modelos de oferta</h3>
+            ${freqList(comparison.offer_frequency)}
+          </div>
+
+          ${valid.map(r => `
+            <div class="card span6">
+              <h3>${esc(r.profile.name)}</h3>
+              <h4>Servicios detectados</h4>
+              <div class="pills">${(r.services || []).map(x => pill(x.label)).join("") || "—"}</div>
+
+              <h4>Señales de oferta</h4>
+              <div class="pills">${(r.offers || []).map(x => pill(x.label)).join("") || "—"}</div>
+
+              <h4>Precios visibles</h4>
+              ${r.prices && r.prices.length ? r.prices.map(x => `<div class="source-row">${esc(x)}</div>`).join("") : '<span class="muted">No se encontraron precios explícitos.</span>'}
+            </div>
+          `).join("")}
+        </div>
+      </section>
+    `;
+
+    html += `
+      <section id="prueba" class="section">
+        <div class="grid">
+          ${valid.map(r => `
+            <div class="card span6">
+              <h3>${esc(r.profile.name)}</h3>
+              <div class="profile">
+                <div>URLs tipo case study</div><div>${r.content_footprint["Case Studies"] || 0}</div>
+                <div>Claims cuantificados</div><div>${r.proof_points.length}</div>
+                <div>Señales de Clutch</div><div>${(r.clutch || []).length}</div>
+              </div>
+
+              <h4>Claims cuantificados</h4>
+              ${r.proof_points.length ? r.proof_points.map(x => `<div class="source-row">${esc(x)}</div>`).join("") : '<span class="muted">No se detectaron claims cuantificados claros.</span>'}
+
+              <h4>Señales de Clutch</h4>
+              ${r.clutch.length ? r.clutch.map(x => `
+                <div class="source-row">
+                  <b>${esc(x.title)}</b><br>
+                  ${link(x.url, "Abrir resultado")} ${x.rating ? `· Rating: ${esc(x.rating)}` : ""} ${x.reviews ? `· Reviews: ${esc(x.reviews)}` : ""}
+                </div>
+              `).join("") : '<span class="muted">No se detectaron señales indexadas de Clutch.</span>'}
+            </div>
+          `).join("")}
+        </div>
+      </section>
+    `;
+
+    html += `
+      <section id="funnel" class="section">
+        <div class="grid">
+          ${valid.map(r => `
+            <div class="card span6">
+              <h3>${esc(r.profile.name)}</h3>
+              <div class="profile">
+                <div>Formularios</div><div>${r.forms.count}</div>
+                <div>Promedio de campos</div><div>${r.forms.avg_fields}</div>
+                <div>CTAs encontrados</div><div>${r.ctas.length}</div>
+                <div>Página de precios</div><div>${yes(!!r.key_pages.pricing)}</div>
+                <div>Página de casos</div><div>${yes(!!r.key_pages.case_studies)}</div>
+                <div>Página de contacto</div><div>${yes(!!r.key_pages.contact)}</div>
+              </div>
+
+              <h4>CTAs observados</h4>
+              ${r.ctas.length ? r.ctas.map(x => `<div class="source-row"><b>${esc(x.label)}</b><div class="small">${link(x.url, x.url)}</div></div>`).join("") : '<span class="muted">No se detectaron CTAs relevantes.</span>'}
+
+              <h4>Estructura de formularios</h4>
+              ${r.forms.forms.length ? r.forms.forms.map((f, idx) => `<div class="source-row"><b>Formulario ${idx+1}</b> · ${f.fields} campos<div class="small muted">${esc((f.field_names || []).join(", "))}</div></div>`).join("") : '<span class="muted">No se detectaron formularios en la página principal.</span>'}
+            </div>
+          `).join("")}
+        </div>
+      </section>
+    `;
+
+    html += `
+      <section id="negocio" class="section">
+        <div class="grid">
+          <div class="card span12">
+            <h3>Qué podemos y qué no podemos saber desde afuera</h3>
+            <div class="callout">
+              <b>Lectura gerencial:</b> en agencias privadas, ingresos, costos, EBITDA, deuda y ROE casi nunca son públicos. AgencyScope no los inventa. En su lugar usa señales observables —pricing, modelo de cobro, recurrencia, prueba, adquisición, funnel y madurez— para construir hipótesis comparables.
+            </div>
+          </div>
+
+          ${valid.map(r => `
+            <div class="card span6">
+              <h3>${esc(r.profile.name)}</h3>
+
+              <div class="profile">
+                <div>Madurez pública</div><div><b>${r.maturity_proxy.score}/100</b> · ${esc(r.maturity_proxy.label)}</div>
+                <div>Transparencia comercial</div><div><b>${r.commercial_transparency.score}/100</b></div>
+                <div>Canales de adquisición</div><div>${r.acquisition_mix.length}</div>
+                <div>Señales de crecimiento</div><div>${r.growth_signals.length}</div>
+                <div>Riesgos / alertas</div><div>${r.managerial_risks.length}</div>
+              </div>
+
+              <h4>Modelo comercial visible</h4>
+              <div class="pills">${(r.business_models || []).map(x => pill(x.label)).join("") || '<span class="muted">No concluyente</span>'}</div>
+
+              <h4>Sales motion</h4>
+              <div class="pills">${(r.sales_motion || []).map(pill).join("")}</div>
+
+              <h4>Mix de adquisición visible</h4>
+              <div class="signal-list">
+                ${(r.acquisition_mix || []).map(x => `<div class="signal"><b>${esc(x.channel)}</b><span>${esc(x.evidence)}</span></div>`).join("") || '<span class="muted">No se detectaron suficientes señales.</span>'}
+              </div>
+
+              <h4>Señales de crecimiento / estructura</h4>
+              <div class="signal-list">
+                ${(r.growth_signals || []).map(x => `<div class="signal"><b>${esc(x.label)}</b><span>${esc((x.evidence || []).join(", "))}</span></div>`).join("") || '<span class="muted">No se detectaron señales claras.</span>'}
+              </div>
+
+              <h4>Alertas gerenciales</h4>
+              ${(r.managerial_risks || []).map(x => `<div class="risk"><b>${esc(x.risk)}</b><span>${esc(x.why)}</span></div>`).join("") || '<span class="good">No se detectaron alertas evidentes con la información pública disponible.</span>'}
+            </div>
+
+            <div class="card span6">
+              <h3>${esc(r.profile.name)} · Lente financiera</h3>
+              <p class="small muted">Esta vista refleja el marco financiero de la clase sin atribuir cifras privadas que no podemos verificar.</p>
+
+              <div class="financial-table">
+                ${Object.entries(r.financial_lens || {}).map(([k,v]) => `
+                  <div class="financial-row">
+                    <b>${esc(k)}</b>
+                    <span class="visibility">${esc(v.visibility)}</span>
+                    <span class="small muted">${esc(v.detail)}</span>
+                  </div>
+                `).join("")}
+              </div>
+
+              <h4>Por qué esto importa para tu futura agencia</h4>
+              <div class="source-row">Un modelo recurrente puede mejorar previsibilidad de ingresos, pero exige retención y capacidad operativa sostenida.</div>
+              <div class="source-row">Un modelo performance puede reducir fricción de venta, pero transfiere más riesgo hacia la agencia.</div>
+              <div class="source-row">Pricing visible reduce incertidumbre, aunque puede limitar flexibilidad comercial en servicios complejos.</div>
+              <div class="source-row">Más prueba y mejor funnel no equivalen automáticamente a rentabilidad; son señales del sistema comercial, no del EBITDA real.</div>
+            </div>
+          `).join("")}
+        </div>
+      </section>
+    `;
+
+    html += `
+      <section id="contenido" class="section">
+        <div class="grid">
+          ${valid.map(r => `
+            <div class="card span6">
+              <h3>${esc(r.profile.name)}</h3>
+              <div class="profile">
+                <div>URLs en sitemap</div><div>${r.sitemap_pages}</div>
+                <div>SEO/AEO</div><div>${r.seo.score}/100</div>
+                <div>Blog / insights</div><div>${r.content_footprint["Blog / Insights"] || 0}</div>
+                <div>Case studies</div><div>${r.content_footprint["Case Studies"] || 0}</div>
+                <div>Guides / research</div><div>${r.content_footprint["Guides / Research"] || 0}</div>
+                <div>Tools / calculators</div><div>${r.content_footprint["Tools / Calculators"] || 0}</div>
+              </div>
+
+              <h4>Checklist SEO / AEO</h4>
+              <div class="accordion">
+                <details open>
+                  <summary><span>Ver señales SEO / AEO</span><span>▾</span></summary>
+                  <div class="details-body">
+                    ${Object.entries(r.seo.checks || {}).map(([k,v]) => `<div class="source-row">${yes(v)} ${esc(k)}</div>`).join("")}
+                  </div>
+                </details>
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      </section>
+    `;
+
+    html += `
+      <section id="pauta" class="section">
+        <div class="grid">
+          ${valid.map(r => `
+            <div class="card span6">
+              <h3>${esc(r.profile.name)}</h3>
+
+              <h4>Stack tecnológico detectado</h4>
+              ${sourceRows((r.technology_stack || []).filter(x => x.detected), x => `
+                <div class="source-row"><span class="good">●</span> ${esc(x.technology)}</div>
+              `)}
+
+              <h4>Redes oficiales</h4>
+              <div class="pills">${
+                Object.entries(r.socials || {}).map(([k,v]) => `<span class="pill">${esc(k)} · ${link(v.url, "abrir")}</span>`).join("") || "—"
+              }</div>
+
+              <h4>Librerías / verificación de anuncios</h4>
+              ${Object.entries(r.ad_library_links || {}).map(([k,v]) => `
+                <div class="source-row"><b>${esc(k)}</b><div class="small">${link(v,v)}</div></div>
+              `).join("")}
+            </div>
+          `).join("")}
+        </div>
+      </section>
+    `;
+
+    html += `
+      <section id="whitespace" class="section">
+        <div class="grid">
+          <div class="card span6">
+            <h3>Posibles espacios en servicios</h3>
+            <p class="small muted">Categorías observadas en ≤40% del set. Son señales de exploración, no recomendaciones automáticas.</p>
+            ${freqList(comparison.whitespace?.services)}
+          </div>
+
+          <div class="card span6">
+            <h3>Categorías saturadas</h3>
+            <p class="small muted">Servicios presentes en ≥70% del set.</p>
+            ${freqList(comparison.whitespace?.saturated_services)}
+          </div>
+
+          <div class="card span12">
+            <h3>Posibles espacios por nicho</h3>
+            ${freqList(comparison.whitespace?.industries)}
+          </div>
+
+          <div class="card span12">
+            <div class="callout">
+              <b>Interpretación recomendada:</b> si una categoría aparece poco, no significa por sí sola que sea una buena oportunidad. Conviene contrastar ese hallazgo con demanda real, diferenciación, rentabilidad, capacidades y barreras de entrada.
+            </div>
+          </div>
+        </div>
+      </section>
+    `;
+
+    html += `
+      <section id="evidencia" class="section">
+        <div class="grid">
+          ${valid.map(r => `
+            <div class="card span6">
+              <h3>${esc(r.profile.name)}</h3>
+
+              <h4>Fuentes y páginas clave</h4>
+              <div class="profile">
+                <div>Sitio</div><div>${link(r.profile.website, r.profile.website)}</div>
+                ${Object.entries(r.key_pages || {}).map(([k,u]) => `<div>${esc(k)}</div><div>${link(u,u)}</div>`).join("")}
+              </div>
+
+              <h4>Reglas de interpretación</h4>
+              <ul class="small muted">
+                ${(r.evidence_notes || []).map(x => `<li>${esc(x)}</li>`).join("")}
+              </ul>
+            </div>
+          `).join("")}
+        </div>
+      </section>
+    `;
+
+    html += `<div class="footer-note">AgencyScope presenta una lectura comparativa de señales públicas. Úsalo como herramienta estratégica para formular hipótesis, no como verdad absoluta del negocio de cada competidor.</div>`;
+
+    document.getElementById("output").innerHTML = html;
+    bindNav();
+
+    setTimeout(() => {
+      const labels = rows.map(x => x.name);
+
+      makeChart("scoreBars", "bar", labels, [
+        { label:"Posicionamiento", data:rows.map(x => x.positioning_score), backgroundColor:"#5C63FF", borderRadius:8 },
+        { label:"Prueba", data:rows.map(x => x.proof_score), backgroundColor:"#7C89FF", borderRadius:8 },
+        { label:"Funnel", data:rows.map(x => x.funnel_score), backgroundColor:"#9CD8CF", borderRadius:8 }
+      ]);
+
+
+      makeChart("acquisitionChart", "bar", labels, [
+        { label:"Canales visibles", data:rows.map(x => x.acquisition_channels), backgroundColor:"#33C6B8", borderRadius:8 }
+      ]);
+
+      const maturityEl = document.getElementById("maturityScatter");
+      if(maturityEl){
+        charts.push(new Chart(maturityEl, {
+          type:"scatter",
+          data:{
+            datasets: rows.map(r => ({
+              label:r.name,
+              data:[{ x:r.maturity_score, y:r.commercial_transparency }],
+              pointRadius:8,
+              pointHoverRadius:10
+            }))
+          },
+          options:{
+            responsive:true,
+            maintainAspectRatio:false,
+            plugins:{ legend:{ labels:{ color:"#475467" } } },
+            scales:{
+              x:{ min:0,max:100,title:{display:true,text:"Madurez pública"},grid:{color:"#eef1f6"} },
+              y:{ min:0,max:100,title:{display:true,text:"Transparencia comercial"},grid:{color:"#eef1f6"} }
+            }
+          }
+        }));
+      }
+
+      const scatterEl = document.getElementById("scatter");
+      if(scatterEl){
+        charts.push(new Chart(scatterEl, {
+          type:"scatter",
+          data:{
+            datasets: rows.map((r,i) => ({
+              label:r.name,
+              data:[{ x:r.positioning_score, y:r.proof_score }],
+              pointRadius:8,
+              pointHoverRadius:10
+            }))
+          },
+          options:{
+            responsive:true,
+            maintainAspectRatio:false,
+            plugins:{ legend:{ labels:{ color:"#475467" } } },
+            scales:{
+              x:{ min:0, max:100, title:{ display:true, text:"Claridad de posicionamiento" }, grid:{ color:"#eef1f6" } },
+              y:{ min:0, max:100, title:{ display:true, text:"Fortaleza de prueba" }, grid:{ color:"#eef1f6" } }
+            }
+          }
+        }));
+      }
+    }, 60);
+  }
+
+  function bindNav(){
+    document.querySelectorAll(".nav button").forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll(".nav button").forEach(x => x.classList.remove("active"));
+        document.querySelectorAll(".section").forEach(x => x.classList.remove("active"));
+        btn.classList.add("active");
+        const section = document.getElementById(btn.dataset.tab);
+        if(section) section.classList.add("active");
+        if(window.innerWidth < 1040){
+          window.scrollTo({ top: 260, behavior: "smooth" });
+        }
+      };
+    });
+  }
+
+  function setCompetitors(arr){
+    document.getElementById("domains").value = arr.join("\n");
+  }
+
+  function loadExample(){
+    setCompetitors(["webfx.com","singlegrain.com","smartsites.com","no-good.io"]);
+  }
+
+  async function analyze(){
+    const ds = document.getElementById("domains").value.split(/[\n,]+/).map(x => x.trim()).filter(Boolean).slice(0,8);
+    if(!ds.length){
+      alert("Agrega al menos un dominio competidor.");
+      return;
+    }
+
+    document.getElementById("loading").style.display = "flex";
+    document.getElementById("output").innerHTML = "";
+
+    try{
+      const res = await fetch("/api/compare", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body:JSON.stringify({
+          domains:ds,
+          country:document.getElementById("country").value
+        })
+      });
+      const data = await res.json();
+      render(data);
+    }catch(err){
+      document.getElementById("output").innerHTML = `
+        <div class="callout">
+          Ocurrió un error al ejecutar el benchmark.<br>
+          <span class="small">${esc(err.toString())}</span>
+        </div>
+      `;
+    }
+
+    document.getElementById("loading").style.display = "none";
+  }
+
+  function exportCSV(){
+    if(!current){
+      alert("Primero ejecuta un benchmark.");
+      return;
+    }
+    const rows = current.comparison?.companies || [];
+    const cols = [
+      "name","domain","location","services","industries","pricing_public","proof_points","case_studies",
+      "content_pages","social_networks","ad_pixels","seo_score","response_ms",
+      "positioning_score","offer_score","proof_score","funnel_score","content_score","paid_score","maturity_score","commercial_transparency","acquisition_channels","business_models","growth_signals","managerial_risks"
+    ];
+    const csv = [
+      cols.join(","),
+      ...rows.map(r => cols.map(c => `"${(r[c] ?? "").toString().replaceAll('"','""')}"`).join(","))
+    ].join("\n");
+
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type:"text/csv;charset=utf-8;" }));
+    a.download = "agencyscope_benchmark.csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  bindNav();
+</script>
+</body>
+</html>
